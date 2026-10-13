@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>一键cook玩法选择 · 交互原型</title>
+<style>
+/* === 1. 设计 token === */
+:root{
+  --primary:#E37318; --primary-hover:#F08A34; --primary-active:#C96410; --primary-weak:#FFF3E8;
+  --checked:#0052D9; --checked-weak:#E8F0FF;
+  --success:#2BA471; --success-weak:#E3F9E9;
+  --danger:#D54941; --danger-weak:#FDECEE;
+  --bg-page:#F0F2F5; --bg-subtle:#F7F8FA; --bg-hover:#F7F8FA;
+  --text-1:#1F2329; --text-2:#646A73; --text-3:#8F959E; --text-4:#C9CDD4;
+  --border:#E5E6EB; --border-strong:#DEE0E3; --line:#F2F3F5;
+  --radius-s:4px; --radius-m:6px; --radius-l:10px;
+  --shadow-modal:0 8px 32px rgba(31,35,41,.16);
+  --shadow-pop:0 4px 16px rgba(31,35,41,.12);
+}
+/* === 2. 基础层 === */
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;}
+body{
+  font-family:"PingFang SC","Microsoft YaHei","Helvetica Neue",Arial,sans-serif;
+  font-size:14px;color:var(--text-1);background:var(--bg-page);
+  -webkit-font-smoothing:antialiased;
+}
+a{color:var(--checked);text-decoration:none;cursor:pointer;}
+a:hover{text-decoration:underline;}
+button{font-family:inherit;cursor:pointer;}
+[hidden]{display:none !important;}
+/* === 3. 布局 === */
+#demoBar{
+  position:fixed;top:0;left:0;right:0;height:48px;z-index:300;
+  display:flex;align-items:center;gap:16px;padding:0 20px;
+  background:#26282E;color:#D6D9DE;font-size:12px;
+  box-shadow:0 2px 8px rgba(0,0,0,.18);
+}
+.demo-bar__title{font-weight:600;color:#fff;font-size:13px;margin-right:4px;}
+.demo-bar__links{margin-left:auto;display:flex;align-items:center;gap:6px;}
+.demo-bar__links a{color:#8CB8FF;}
+/* 遮罩与弹窗 */
+.mask{
+  position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.42);
+  display:flex;align-items:center;justify-content:center;
+  padding:60px 24px 24px;overflow:auto;
+}
+.mask--top{z-index:150;background:rgba(0,0,0,.32);}
+.fb-modal{
+  background:#fff;border-radius:var(--radius-l);box-shadow:var(--shadow-modal);
+  width:1100px;max-width:100%;display:flex;flex-direction:column;max-height:100%;
+}
+.fb-modal--narrow{width:760px;}
+.fb-modal--mid{width:640px;}
+.fb-modal__head{
+  display:flex;align-items:center;gap:16px;padding:16px 24px;
+  border-bottom:1px solid var(--border);flex-shrink:0;
+}
+.fb-modal__title{font-size:16px;font-weight:600;}
+.fb-modal__close{
+  margin-left:auto;color:var(--text-3);font-size:20px;line-height:1;
+  text-decoration:none;cursor:pointer;
+}
+.fb-modal__close:hover{color:var(--text-1);text-decoration:none;}
+.fb-modal__body{padding:16px 24px;overflow:auto;flex:1;}
+.fb-modal__foot{
+  display:flex;align-items:center;gap:24px;padding:12px 24px;
+  border-top:1px solid var(--border);flex-shrink:0;
+}
+/* === 4. 组件层 === */
+/* 按钮 */
+.fb-btn{
+  padding:6px 20px;border-radius:var(--radius-m);font-size:14px;
+  border:1px solid var(--border-strong);background:#fff;color:var(--text-1);
+}
+.fb-btn:hover{border-color:var(--primary);color:var(--primary);}
+.fb-btn--primary{background:var(--primary);border-color:var(--primary);color:#fff;}
+.fb-btn--primary:hover{background:var(--primary-hover);border-color:var(--primary-hover);color:#fff;}
+.fb-btn--primary:active{background:var(--primary-active);border-color:var(--primary-active);}
+.fb-btn[disabled]{background:#F2F3F5;border-color:var(--border);color:var(--text-4);cursor:not-allowed;}
+.fb-btn[disabled]:hover{background:#F2F3F5;border-color:var(--border);color:var(--text-4);}
+/* 选择卡片（麦当劳式二选一） */
+.pick__hint{color:var(--text-2);margin-bottom:16px;}
+.pick__hint b{color:var(--text-1);}
+.pick__cards{display:flex;gap:20px;}
+.pick-card{
+  flex:1;border:1px solid var(--border-strong);border-radius:var(--radius-l);
+  padding:28px 24px;cursor:pointer;position:relative;background:#fff;
+  transition:border-color .15s,box-shadow .15s;
+}
+.pick-card:hover{border-color:var(--primary);box-shadow:0 4px 16px rgba(227,115,24,.12);}
+.pick-card__icon{
+  width:44px;height:44px;border-radius:var(--radius-m);background:var(--primary-weak);
+  display:flex;align-items:center;justify-content:center;margin-bottom:14px;
+}
+.pick-card__title{font-size:16px;font-weight:600;margin-bottom:8px;}
+.pick-card__desc{color:var(--text-2);line-height:1.7;margin-bottom:12px;}
+.pick-card__tag{
+  display:inline-block;font-size:12px;color:var(--primary);
+  background:var(--primary-weak);border-radius:var(--radius-s);padding:2px 8px;
+}
+/* 导入页 */
+.back-link{display:inline-block;margin-bottom:12px;color:var(--text-2);font-size:13px;}
+.back-link:hover{color:var(--primary);}
+.imp__upload{
+  border:1.5px dashed var(--border-strong);border-radius:var(--radius-l);
+  padding:36px 24px;text-align:center;cursor:pointer;background:var(--bg-subtle);
+  transition:border-color .15s,background .15s;
+}
+.imp__upload:hover,.imp__upload.is-over{border-color:var(--primary);background:var(--primary-weak);}
+.imp__upload-icon{
+  width:44px;height:44px;margin:0 auto 12px;border-radius:50%;
+  background:var(--checked-weak);display:flex;align-items:center;justify-content:center;
+}
+.imp__upload-main{font-size:14px;color:var(--text-1);}
+.imp__upload-main b{color:var(--checked);}
+.imp__upload-sub{margin-top:6px;font-size:12px;color:var(--text-3);}
+.file-chip{
+  margin-top:12px;display:flex;align-items:center;gap:8px;
+  background:var(--bg-subtle);border:1px solid var(--border);border-radius:var(--radius-m);
+  padding:8px 12px;font-size:13px;
+}
+.file-chip__name{color:var(--text-1);}
+.file-chip__size{color:var(--text-3);font-size:12px;}
+.file-chip a{margin-left:auto;font-size:12px;}
+.imp__tpl{
+  margin-top:14px;display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-2);
+}
+.imp__tpl a{font-weight:600;}
+.imp__rule{
+  margin-top:14px;border:1px solid var(--border);border-radius:var(--radius-l);
+  padding:16px 20px;background:#fff;
+}
+.imp__rule-title{font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.imp__rule-title::before{content:"";width:3px;height:14px;background:var(--primary);border-radius:2px;}
+.imp__rule ol{margin:0 0 12px 18px;color:var(--text-2);line-height:2;}
+.imp__rule ol b{color:var(--primary);}
+.imp__sample{border:1px solid var(--border);border-radius:var(--radius-m);overflow:hidden;width:200px;}
+.imp__sample table{border-collapse:collapse;width:100%;font-size:12px;}
+.imp__sample th,.imp__sample td{
+  border:1px solid var(--line);padding:6px 14px;text-align:left;color:var(--text-2);
+}
+.imp__sample th{background:var(--bg-subtle);font-weight:600;color:var(--text-1);}
+.imp__sample th.is-key{color:var(--primary);background:var(--primary-weak);}
+.imp__footrow{
+  margin-top:20px;display:flex;align-items:center;gap:16px;
+}
+/* 筛选区 */
+.filter-bar{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap;}
+.filter-item{display:flex;align-items:center;gap:6px;color:var(--text-2);font-size:13px;}
+.fb-select,.fb-input{
+  height:30px;border:1px solid var(--border-strong);border-radius:var(--radius-m);
+  padding:0 8px;font-size:13px;color:var(--text-1);background:#fff;outline:none;
+  font-family:inherit;
+}
+.fb-select{min-width:120px;}
+.fb-input{width:150px;}
+.fb-input::placeholder{color:var(--text-4);}
+.fb-select:focus,.fb-input:focus{border-color:var(--primary);}
+/* 轻提示条 */
+.notice-bar{
+  display:flex;align-items:center;gap:10px;margin-bottom:14px;
+  background:var(--primary-weak);border:1px solid #F5D5B8;border-radius:var(--radius-m);
+  padding:8px 14px;font-size:13px;color:var(--text-1);
+}
+.notice-bar__icon{flex-shrink:0;display:flex;}
+.notice-bar b{color:var(--primary);}
+.notice-bar .divider{color:var(--text-4);margin:0 2px;}
+/* 表格 */
+.fb-table{width:100%;border-collapse:collapse;}
+.fb-table th{
+  background:var(--bg-subtle);color:var(--text-2);font-weight:500;text-align:left;
+  padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap;
+}
+.fb-table td{
+  padding:12px;border-bottom:1px solid var(--line);color:var(--text-1);vertical-align:middle;
+}
+.fb-table tr:hover td{background:var(--bg-hover);}
+.fb-table .col-check{width:44px;}
+.fb-table .col-name{width:200px;}
+.fb-table .col-job{width:190px;}
+.fb-table .col-src{width:130px;}
+.fb-table .col-status{width:110px;}
+.fb-table .col-rate{width:120px;}
+.th-check{display:flex;align-items:center;gap:10px;}
+.th-check label{display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:500;color:var(--text-2);}
+.status-ok{color:var(--text-1);}
+/* 复选框 */
+.fb-check{
+  appearance:none;width:16px;height:16px;border:1px solid var(--border-strong);
+  border-radius:3px;background:#fff;cursor:pointer;position:relative;vertical-align:middle;
+  flex-shrink:0;
+}
+.fb-check:checked{background:var(--checked);border-color:var(--checked);}
+.fb-check:checked::after{
+  content:"";position:absolute;left:4px;top:1px;width:5px;height:9px;
+  border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg);
+}
+.fb-check:hover{border-color:var(--checked);}
+/* 底部 */
+.foot-check{display:flex;align-items:center;gap:6px;color:var(--text-2);cursor:pointer;}
+.foot-check input{accent-color:var(--checked);}
+.foot-right{margin-left:auto;display:flex;align-items:center;gap:16px;}
+.foot-count{color:var(--text-2);font-size:13px;}
+.foot-count b{color:var(--primary);font-size:18px;font-family:DIN,"Helvetica Neue",sans-serif;}
+/* 弹窗（失败 / 历史） */
+.sub-modal__head{
+  display:flex;align-items:center;padding:16px 24px;border-bottom:1px solid var(--border);
+}
+.sub-modal__title{font-size:16px;font-weight:600;}
+.sub-modal__body{padding:20px 24px;overflow:auto;}
+.sub-modal__foot{
+  display:flex;justify-content:flex-end;gap:12px;padding:12px 24px;
+  border-top:1px solid var(--border);
+}
+.fail-intro{color:var(--text-2);line-height:1.8;margin-bottom:14px;}
+.fail-intro b{color:var(--danger);}
+.fail-list{
+  max-height:240px;overflow:auto;border:1px solid var(--border);border-radius:var(--radius-m);
+  background:var(--bg-subtle);
+}
+.fail-list li{
+  list-style:none;padding:8px 16px;display:flex;align-items:center;gap:10px;
+  color:var(--danger);border-bottom:1px solid var(--line);font-size:13px;
+}
+.fail-list li:last-child{border-bottom:none;}
+.fail-list li::before{
+  content:"";width:6px;height:6px;border-radius:50%;background:var(--danger);flex-shrink:0;
+}
+.hist-row{border-bottom:1px solid var(--line);padding:14px 4px;}
+.hist-row:last-child{border-bottom:none;}
+.hist-main{display:flex;align-items:center;gap:14px;}
+.hist-file{font-weight:600;}
+.hist-time{color:var(--text-3);font-size:12px;}
+.hist-counts{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:12px;}
+.badge{
+  display:inline-block;border-radius:var(--radius-s);padding:2px 8px;font-size:12px;
+}
+.badge--ok{background:var(--success-weak);color:var(--success);}
+.badge--fail{background:var(--danger-weak);color:var(--danger);}
+.hist-detail{margin-top:10px;background:var(--danger-weak);border-radius:var(--radius-m);padding:10px 14px;}
+.hist-detail-title{font-size:12px;color:var(--danger);margin-bottom:6px;font-weight:600;}
+.hist-detail-names{font-size:13px;color:var(--danger);line-height:1.9;}
+.hist-empty{color:var(--text-3);text-align:center;padding:32px 0;}
+/* toast */
+#toast{
+  position:fixed;top:64px;left:50%;transform:translateX(-50%);z-index:400;
+  background:#26282E;color:#fff;border-radius:var(--radius-m);padding:9px 20px;
+  font-size:13px;box-shadow:var(--shadow-pop);max-width:70%;
+}
+/* === 5. 工具类 === */
+.link-btn{background:none;border:none;color:var(--checked);font-size:13px;padding:0;}
+.link-btn:hover{text-decoration:underline;}
+.muted{color:var(--text-3);}
+</style>
+</head>
+<body>
+
+<!-- 顶部演示控制条（非需求内容，仅供评审切换演示场景） -->
+<div id="demoBar">
+  <span class="demo-bar__title">原型演示 · 一键cook 玩法来源选择</span>
+  <span class="demo-bar__links">
+    模拟导入结果：
+    <a href="javascript:;" id="lnkFail">部分失败</a><span>·</span>
+    <a href="javascript:;" id="lnkAllOk">全部成功</a><span>·</span>
+    <a href="javascript:;" id="lnkReset">重置</a>
+  </span>
+</div>
+
+<!-- 主弹窗 -->
+<div class="mask" id="mask">
+  <div class="fb-modal" id="modal">
+    <div class="fb-modal__head">
+      <span class="fb-modal__title">一键发布正式服环境玩法</span>
+      <a class="fb-modal__close" id="btnClose" title="关闭">&times;</a>
+    </div>
+
+    <div class="fb-modal__body">
+
+      <!-- 形态A · 独立选择页 -->
+      <div id="chooseRegion" hidden>
+        <p class="pick__hint">第 1 步 · 请选择玩法来源，<b>点击卡片</b>进入对应流程</p>
+        <div class="pick__cards">
+          <div class="pick-card" id="cardSystem" data-mode="system">
+            <div class="pick-card__icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="2" stroke="#E37318" stroke-width="1.6"/><path d="M3 9h18M8.5 13h7M8.5 16.5h4" stroke="#E37318" stroke-width="1.6" stroke-linecap="round"/></svg>
+            </div>
+            <div class="pick-card__title">列表选择</div>
+            <div class="pick-card__desc">从系统现有的玩法列表中，直接勾选需要 cook 发布的玩法。</div>
+            <span class="pick-card__tag">进入现有列表页</span>
+          </div>
+          <div class="pick-card" id="cardImport" data-mode="import">
+            <div class="pick-card__icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M5 3h10l4 4v14H5V3z" stroke="#E37318" stroke-width="1.6" stroke-linejoin="round"/><path d="M15 3v4h4" stroke="#E37318" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 12h6M12 9.5V14.5" stroke="#E37318" stroke-width="1.6" stroke-linecap="round"/></svg>
+            </div>
+            <div class="pick-card__title">Excel 导入</div>
+            <div class="pick-card__desc">上传 Excel 文件，系统按「玩法名称」列自动匹配玩法，匹配成功后进入列表继续操作。</div>
+            <span class="pick-card__tag">适合玩法较多的场景</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Excel 导入页 -->
+      <div id="importRegion" hidden>
+        <a class="back-link" href="javascript:;" id="btnBackFromImport">&larr; 返回上一步</a>
+        <div class="imp__upload" id="uploadBox">
+          <div class="imp__upload-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 16V4m0 0 4.5 4.5M12 4 7.5 8.5" stroke="#0052D9" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16v3a1.5 1.5 0 0 0 1.5 1.5h13A1.5 1.5 0 0 0 20 19v-3" stroke="#0052D9" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </div>
+          <div class="imp__upload-main">点击或拖拽 Excel 文件到此处，或 <b>点击选择文件</b></div>
+          <div class="imp__upload-sub">仅支持 .xlsx / .xls 格式，文件大小不超过 10MB（演示环境使用模拟文件）</div>
+        </div>
+        <div class="file-chip" id="fileChip" hidden>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 3h10l4 4v14H5V3z" stroke="#2BA471" stroke-width="1.6" stroke-linejoin="round"/><path d="M15 3v4h4" stroke="#2BA471" stroke-width="1.6" stroke-linejoin="round"/></svg>
+          <span class="file-chip__name" id="fileName"></span>
+          <span class="file-chip__size" id="fileSize"></span>
+          <a href="javascript:;" id="btnRechoose">重新选择</a>
+        </div>
+        <div class="imp__tpl">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 16V4m0 0 4.5 4.5M12 4 7.5 8.5" stroke="#2BA471" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16v3a1.5 1.5 0 0 0 1.5 1.5h13A1.5 1.5 0 0 0 20 19v-3" stroke="#2BA471" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <span>先下载导入模版：<a href="javascript:;" id="btnDownloadTpl">一键cook导入模版</a><span class="muted">（.xlsx，模版仅含一列「玩法名称」）</span></span>
+        </div>
+        <div class="imp__rule">
+          <div class="imp__rule-title">导入格式说明</div>
+          <ol>
+            <li>Excel <b>第一列列头为「玩法名称」</b>，请在该列中填写需要导入的玩法名称；</li>
+            <li>导入时系统将逐行匹配：匹配到的玩法<b>导入成功</b>，未识别到的玩法<b>导入失败</b>，并弹窗展示失败名单；</li>
+            <li>导入成功后进入玩法列表，仅展示导入成功的玩法，其余操作与列表选择一致。</li>
+          </ol>
+          <div class="imp__sample">
+            <table>
+              <tr><th class="is-key">玩法名称（第一列）</th></tr>
+              <tr><td>塔防玩法38</td></tr>
+              <tr><td>跑酷竞速38</td></tr>
+              <tr><td>钓鱼玩法38</td></tr>
+            </table>
+          </div>
+        </div>
+        <div class="imp__footrow">
+          <a href="javascript:;" id="btnHistoryFromImport">导入历史</a>
+          <div style="margin-left:auto;display:flex;gap:12px;">
+            <button class="fb-btn" id="btnImportCancel">取消</button>
+            <button class="fb-btn fb-btn--primary" id="btnStartImport" disabled>开始导入</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 玩法列表页 -->
+      <div id="listRegion" hidden>
+        <a class="back-link" href="javascript:;" id="btnBackFromList">&larr; 返回上一步</a>
+        <div class="notice-bar" id="importNotice" hidden>
+          <span class="notice-bar__icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#E37318" stroke-width="1.6"/><path d="M12 8v5" stroke="#E37318" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="16" r="1" fill="#E37318"/></svg>
+          </span>
+          <span id="importNoticeText"></span>
+          <a href="javascript:;" id="lnkViewFail">查看失败名单</a>
+          <span class="divider">|</span>
+          <a href="javascript:;" id="lnkHistoryFromList">导入历史</a>
+        </div>
+        <div class="filter-bar">
+          <span class="filter-item">目标环境选择
+            <select class="fb-select"><option>体验服</option><option>正式服</option></select>
+          </span>
+          <span class="filter-item">目标版本号选择
+            <select class="fb-select"><option>1.38.1.5005</option><option>1.38.1.5004</option></select>
+          </span>
+          <span class="filter-item">项目查询
+            <input class="fb-input" placeholder="模板" value="模板">
+          </span>
+          <span class="filter-item">玩法评级
+            <select class="fb-select"><option>暂未评级</option><option>S</option><option>A</option><option>B</option></select>
+          </span>
+          <span class="filter-item">源版本选择
+            <select class="fb-select"><option>1.38</option><option>1.37</option></select>
+          </span>
+        </div>
+        <table class="fb-table">
+          <thead>
+            <tr>
+              <th class="col-check">
+                <div class="th-check">
+                  <label><input type="checkbox" class="fb-check" id="ckAll"><span id="ckAllText">全选</span></label>
+                  <a href="javascript:;" id="lnkInvert" hidden>反选</a>
+                </div>
+              </th>
+              <th class="col-name">玩法名称</th>
+              <th class="col-job">JobID</th>
+              <th class="col-src">源版本</th>
+              <th class="col-status">上架状态</th>
+              <th class="col-rate">玩法评级</th>
+            </tr>
+          </thead>
+          <tbody id="listBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 列表页底部 -->
+    <div class="fb-modal__foot" id="listFoot" hidden>
+      <label class="foot-check"><input type="checkbox" id="ckCook" checked>是否cook</label>
+      <label class="foot-check"><input type="checkbox" id="ckAutoOnline">发布后默认上架</label>
+      <div class="foot-right">
+        <span class="foot-count">发布玩法数量：<b id="pubCount">0</b></span>
+        <button class="fb-btn fb-btn--primary" id="btnPublish">确认并发布</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- 导入失败弹窗 -->
+<div class="mask mask--top" id="maskFail" hidden>
+  <div class="fb-modal fb-modal--mid">
+    <div class="sub-modal__head">
+      <span class="sub-modal__title">部分玩法导入失败</span>
+      <a class="fb-modal__close" id="btnFailClose" title="关闭">&times;</a>
+    </div>
+    <div class="sub-modal__body">
+      <p class="fail-intro" id="failIntro"></p>
+      <ul class="fail-list" id="failList"></ul>
+      <p class="muted" style="margin-top:12px;font-size:12px;">未识别到的玩法不会进入列表；你可以修改 Excel 后重新导入，或先继续操作已导入成功的玩法。</p>
+    </div>
+    <div class="sub-modal__foot">
+      <button class="fb-btn fb-btn--primary" id="btnFailOk">我知道了</button>
+    </div>
+  </div>
+</div>
+
+<!-- 导入历史弹窗 -->
+<div class="mask mask--top" id="maskHistory" hidden>
+  <div class="fb-modal fb-modal--narrow">
+    <div class="sub-modal__head">
+      <span class="sub-modal__title">导入历史</span>
+      <a class="fb-modal__close" id="btnHistoryClose" title="关闭">&times;</a>
+    </div>
+    <div class="sub-modal__body" id="historyBody"></div>
+    <div class="sub-modal__foot">
+      <button class="fb-btn" id="btnHistoryCancel">关闭</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" hidden></div>
+
+<script>
+/* === 1. 常量与演示数据 === */
+// 系统内全部玩法（列表选择的来源）
+var ALL_PLAYS = [
+  { id:1, name:"jh聊天模板",  job:"122009140", altJobs:["122009140","122009141"], src:"1.38.0.3512", status:"上架", rate:"暂未评级" },
+  { id:2, name:"buff模板38",  job:"122009018", altJobs:["122009018","122009019"], src:"1.38.0.3506", status:"上架", rate:"暂未评级" },
+  { id:3, name:"怪物模板38",  job:"122009017", altJobs:["122009017","122009020"], src:"1.38.0.3506", status:"上架", rate:"暂未评级" },
+  { id:4, name:"塔防玩法38",  job:"122009026", altJobs:["122009026","122009027"], src:"1.38.0.3506", status:"上架", rate:"暂未评级" },
+  { id:5, name:"跑酷竞速38",  job:"122009031", altJobs:["122009031","122009032"], src:"1.38.0.3506", status:"上架", rate:"暂未评级" },
+  { id:6, name:"据点争夺38",  job:"122009035", altJobs:["122009035","122009036"], src:"1.38.0.3506", status:"上架", rate:"暂未评级" },
+  { id:7, name:"农场经营38",  job:"122009040", altJobs:["122009040","122009041"], src:"1.38.0.3506", status:"上架", rate:"暂未评级" },
+  { id:8, name:"钓鱼玩法38",  job:"122009044", altJobs:["122009044","122009045"], src:"1.38.0.3506", status:"上架", rate:"暂未评级" },
+  { id:9, name:"宝箱寻宝38",  job:"122009048", altJobs:["122009048","122009049"], src:"1.38.0.3506", status:"上架", rate:"暂未评级" }
+];
+// 模拟 Excel 文件（部分失败：6 个可匹配 + 3 个未识别）
+var DEMO_FILE_PART_FAIL = {
+  name:"模拟_玩法导入.xlsx", size:"12.4 KB",
+  rows:["塔防玩法38","跑酷竞速38","据点争夺38","农场经营38","钓鱼玩法38","宝箱寻宝38","无尽模式38","竞技场大师38","双人配合38"]
+};
+// 模拟 Excel 文件（全部成功）
+var DEMO_FILE_ALL_OK = {
+  name:"模拟_玩法导入_全匹配.xlsx", size:"9.8 KB",
+  rows:["塔防玩法38","跑酷竞速38","据点争夺38","农场经营38","钓鱼玩法38","宝箱寻宝38"]
+};
+// 预置导入历史（含一次有失败的记录，用于演示「回看历史失败名单」）
+function seedHistory(){
+  return [
+    { time:"2026-10-12 15:32", file:"玩法导入_0930.xlsx", ok:5, fail:2,
+      failNames:["冰雪地图38","夜间模式38"] },
+    { time:"2026-10-09 10:15", file:"节日活动玩法.xlsx", ok:8, fail:0,
+      failNames:[] }
+  ];
+}
+
+/* === 2. 工具函数 === */
+function $(sel){ return document.querySelector(sel); }
+function $all(sel){ return Array.prototype.slice.call(document.querySelectorAll(sel)); }
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function pad2(n){ return (n<10?"0":"")+n; }
+function nowText(){
+  var d=new Date();
+  return d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate())+" "+pad2(d.getHours())+":"+pad2(d.getMinutes());
+}
+var toastTimer=null;
+function toast(msg){
+  var t=$("#toast");
+  t.textContent=msg; t.hidden=false;
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(function(){ t.hidden=true; },2400);
+}
+// 纯函数：根据 Excel 行匹配玩法 → { matched:[], failed:[] }
+function matchPlays(rows){
+  var matched=[], failed=[];
+  rows.forEach(function(name){
+    var hit=ALL_PLAYS.filter(function(p){ return p.name===name; })[0];
+    if(hit){ matched.push(hit); } else { failed.push(name); }
+  });
+  return { matched:matched, failed:failed };
+}
+
+/* === 3. 状态 === */
+var state={
+  view:"choose",       // choose / import / list
+  mode:null,           // 进入列表的来源：system / import
+  importFile:null,     // 已选择的模拟文件
+  scenario:"fail",     // 演示导入结果的场景：fail / allok
+  importResult:null,   // 最近一次导入结果 { file, matched, failed }
+  checked:{},          // 玩法id → true
+  history:seedHistory(),
+  expandedHist:{},     // 历史行展开状态
+  failShow:null        // 失败弹窗当前展示的名单
+};
+
+/* === 4. 渲染 === */
+function render(){
+  var isChoose = state.view==="choose";
+  var isImport = state.view==="import";
+  var isList   = state.view==="list";
+
+  // 渲染区域
+  $("#chooseRegion").hidden  = !isChoose;
+  $("#importRegion").hidden  = !isImport;
+  $("#listRegion").hidden    = !isList;
+
+  // 底部区域
+  $("#listFoot").hidden = !isList;
+
+  // 弹窗宽度
+  var modal=$("#modal");
+  modal.classList.toggle("fb-modal--narrow", isImport);
+
+  if(isImport) renderImport();
+  if(isList)   renderList();
+}
+function renderImport(){
+  var hasFile=!!state.importFile;
+  $("#fileChip").hidden=!hasFile;
+  $("#uploadBox").classList.toggle("is-over",hasFile);
+  if(hasFile){
+    $("#fileName").textContent=state.importFile.name;
+    $("#fileSize").textContent=state.importFile.size;
+  }
+  $("#btnStartImport").disabled=!hasFile;
+}
+function renderList(){
+  var isImport = state.mode==="import";
+  var plays = isImport ? (state.importResult?state.importResult.matched:[]) : ALL_PLAYS;
+
+  // 轻提示条
+  var notice=$("#importNotice");
+  notice.hidden=!isImport;
+  if(isImport && state.importResult){
+    $("#importNoticeText").innerHTML="已从 <b>"+esc(state.importResult.file)+"</b> 导入成功 <b>"+state.importResult.matched.length+"</b> 个玩法，失败 <b>"+state.importResult.failed.length+"</b> 个";
+    $("#lnkViewFail").hidden = state.importResult.failed.length===0;
+  }
+
+  // 表头：导入模式增加「反选」
+  $("#lnkInvert").hidden=!isImport;
+  $("#ckAllText").textContent = isImport ? "全选" : "全选";
+
+  // 表体
+  var html="";
+  plays.forEach(function(p){
+    var ck=!!state.checked[p.id];
+    html+="<tr data-id='"+p.id+"'>"
+      +"<td class='col-check'><input type='checkbox' class='fb-check ck-row' data-id='"+p.id+"'"+(ck?" checked":"")+"></td>"
+      +"<td class='col-name'>"+esc(p.name)+"</td>"
+      +"<td class='col-job'><select class='fb-select job-select' data-id='"+p.id+"'>"
+        +p.altJobs.map(function(j){ return "<option"+(j===p.job?" selected":"")+">"+j+"</option>"; }).join("")
+      +"</select></td>"
+      +"<td class='col-src'>"+esc(p.src)+"</td>"
+      +"<td class='col-status status-ok'>"+esc(p.status)+"</td>"
+      +"<td class='col-rate'>"+esc(p.rate)+"</td>"
+      +"</tr>";
+  });
+  if(!plays.length){
+    html="<tr><td colspan='6' style='text-align:center;color:var(--text-3);padding:40px 0;'>暂无玩法，请先导入 Excel 或返回重新选择</td></tr>";
+  }
+  $("#listBody").innerHTML=html;
+  updateCount();
+}
+function updateCount(){
+  var n=Object.keys(state.checked).filter(function(k){ return state.checked[k]; }).length;
+  $("#pubCount").textContent=n;
+  var plays = state.mode==="import" ? (state.importResult?state.importResult.matched:[]) : ALL_PLAYS;
+  var ckAll=$("#ckAll");
+  var visible=plays.filter(function(p){ return state.checked[p.id]; }).length;
+  ckAll.checked = plays.length>0 && visible===plays.length;
+  return n;
+}
+function renderHistory(){
+  var html="";
+  if(!state.history.length){
+    html="<div class='hist-empty'>暂无导入记录</div>";
+  }
+  state.history.forEach(function(h,i){
+    var open=!!state.expandedHist[i];
+    html+="<div class='hist-row'>"
+      +"<div class='hist-main'>"
+      +"<span class='hist-file'>"+esc(h.file)+"</span>"
+      +"<span class='hist-time'>"+esc(h.time)+"</span>"
+      +"<span class='hist-counts'>"
+      +"<span class='badge badge--ok'>成功 "+h.ok+"</span>"
+      +(h.fail>0?"<span class='badge badge--fail'>失败 "+h.fail+"</span>":"")
+      +(h.fail>0?"<a href='javascript:;' class='lnk-hist-toggle' data-i='"+i+"'>"+(open?"收起":"查看未匹配玩法")+"</a>":"")
+      +"</span></div>";
+    if(open && h.fail>0){
+      html+="<div class='hist-detail'><div class='hist-detail-title'>该次导入未匹配到的玩法（"+h.failNames.length+"）</div><div class='hist-detail-names'>"+h.failNames.map(esc).join("、")+"</div></div>";
+    }
+    html+="</div>";
+  });
+  $("#historyBody").innerHTML=html;
+}
+function showFailModal(failNames,okCount,file){
+  state.failShow=failNames;
+  $("#failIntro").innerHTML="导入文件 <b>"+esc(file)+"</b> 时，以下 <b>"+failNames.length+"</b> 个玩法未在系统中识别到，其余 <b>"+okCount+"</b> 个玩法已导入成功：";
+  $("#failList").innerHTML=failNames.map(function(n){ return "<li>"+esc(n)+"</li>"; }).join("");
+  $("#maskFail").hidden=false;
+}
+
+/* === 5. 事件与初始化 === */
+// —— 顶部演示控制条 ——
+$("#lnkFail").addEventListener("click",function(){ state.scenario="fail"; toast("已切换演示场景：导入「部分失败」（含 3 个未识别玩法）"); });
+$("#lnkAllOk").addEventListener("click",function(){ state.scenario="allok"; toast("已切换演示场景：导入「全部成功」"); });
+$("#lnkReset").addEventListener("click",function(){ resetAll(); toast("已重置演示"); });
+
+function resetFlow(){
+  state.view="choose"; state.mode=null;
+  state.importFile=null; state.importResult=null; state.checked={};
+  render();
+}
+function resetAll(){
+  state.scenario="fail"; state.history=seedHistory(); state.expandedHist={};
+  resetFlow();
+}
+
+// —— 点击卡片直接进入对应流程 ——
+$all("#chooseRegion .pick-card").forEach(function(card){
+  card.addEventListener("click",function(){ enterMode(card.dataset.mode); });
+});
+
+function enterMode(mode){
+  state.mode=mode; state.checked={};
+  if(mode==="system"){ state.view="list"; render(); }
+  else { state.view="import"; state.importFile=null; render(); }
+}
+
+// —— 导入页 ——
+$("#btnDownloadTpl").addEventListener("click",function(){
+  toast("已下载导入模版「一键cook导入模版.xlsx」（演示，不产生真实下载）");
+});
+$("#uploadBox").addEventListener("click",function(){
+  // 模拟选择文件（演示环境使用预置模拟文件）
+  state.importFile = state.scenario==="allok" ? DEMO_FILE_ALL_OK : DEMO_FILE_PART_FAIL;
+  renderImport();
+  toast("已选择模拟文件："+state.importFile.name+"（演示）");
+});
+$("#btnRechoose").addEventListener("click",function(e){
+  e.stopPropagation();
+  state.importFile=null; renderImport();
+});
+$("#btnImportCancel").addEventListener("click",resetFlow);
+$("#btnBackFromImport").addEventListener("click",resetFlow);
+$("#btnStartImport").addEventListener("click",function(){
+  if(!state.importFile) return;
+  var r=matchPlays(state.importFile.rows);
+  state.importResult={ file:state.importFile.name, matched:r.matched, failed:r.failed };
+  // 写入导入历史
+  state.history.unshift({
+    time:nowText(), file:state.importFile.name,
+    ok:r.matched.length, fail:r.failed.length, failNames:r.failed.slice()
+  });
+  // 进入列表（默认不勾选）
+  state.checked={}; state.view="list"; render();
+  // 有失败项时弹窗展示失败名单
+  if(r.failed.length>0){
+    showFailModal(r.failed,r.matched.length,state.importFile.name);
+  } else {
+    toast("导入成功：共匹配到 "+r.matched.length+" 个玩法");
+  }
+});
+
+// —— 失败弹窗 ——
+function closeFail(){ $("#maskFail").hidden=true; state.failShow=null; }
+$("#btnFailOk").addEventListener("click",closeFail);
+$("#btnFailClose").addEventListener("click",closeFail);
+$("#maskFail").addEventListener("click",function(e){ if(e.target===this) closeFail(); });
+
+// —— 列表页 ——
+$("#btnBackFromList").addEventListener("click",resetFlow);
+$("#listBody").addEventListener("change",function(e){
+  var el=e.target;
+  if(el.classList.contains("ck-row")){
+    state.checked[el.dataset.id]=el.checked;
+    updateCount();
+  }
+});
+$("#ckAll").addEventListener("change",function(){
+  var plays = state.mode==="import" ? (state.importResult?state.importResult.matched:[]) : ALL_PLAYS;
+  var to=this.checked;
+  plays.forEach(function(p){ state.checked[p.id]=to; });
+  renderList();
+});
+$("#lnkInvert").addEventListener("click",function(){
+  var plays = state.mode==="import" ? (state.importResult?state.importResult.matched:[]) : ALL_PLAYS;
+  plays.forEach(function(p){ state.checked[p.id]=!state.checked[p.id]; });
+  renderList();
+});
+$("#btnPublish").addEventListener("click",function(){
+  var n=updateCount();
+  if(!n){ toast("请先勾选需要发布的玩法"); return; }
+  toast("已确认发布 "+n+" 个玩法（演示，不执行真实发布）");
+});
+$("#lnkViewFail").addEventListener("click",function(){
+  if(state.importResult && state.importResult.failed.length){
+    showFailModal(state.importResult.failed,state.importResult.matched.length,state.importResult.file);
+  }
+});
+
+// —— 导入历史 ——
+function openHistory(){ renderHistory(); $("#maskHistory").hidden=false; }
+function closeHistory(){ $("#maskHistory").hidden=true; state.expandedHist={}; }
+$("#btnHistoryFromImport").addEventListener("click",openHistory);
+$("#lnkHistoryFromList").addEventListener("click",openHistory);
+$("#btnHistoryClose").addEventListener("click",closeHistory);
+$("#btnHistoryCancel").addEventListener("click",closeHistory);
+$("#maskHistory").addEventListener("click",function(e){ if(e.target===this) closeHistory(); });
+$("#historyBody").addEventListener("click",function(e){
+  var el=e.target;
+  if(el.classList && el.classList.contains("lnk-hist-toggle")){
+    var i=+el.dataset.i;
+    state.expandedHist[i]=!state.expandedHist[i];
+    renderHistory();
+  }
+});
+
+// —— 关闭主弹窗 / ESC ——
+$("#btnClose").addEventListener("click",resetFlow);
+document.addEventListener("keydown",function(e){
+  if(e.key!=="Escape") return;
+  if(!$("#maskFail").hidden){ closeFail(); return; }
+  if(!$("#maskHistory").hidden){ closeHistory(); return; }
+  resetFlow();
+});
+
+// 初始渲染
+render();
+</script>
+</body>
+</html>
